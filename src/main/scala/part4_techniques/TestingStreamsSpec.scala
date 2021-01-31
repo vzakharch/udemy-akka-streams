@@ -5,14 +5,16 @@ import akka.stream.ActorMaterializer
 import akka.stream.scaladsl.{Flow, Keep, Sink, Source}
 import akka.stream.testkit.scaladsl.{TestSink, TestSource}
 import akka.testkit.{TestKit, TestProbe}
-import org.scalatest.{BeforeAndAfterAll, WordSpecLike}
+import org.scalatest.wordspec.{AnyWordSpecLike,AsyncWordSpecLike}
+import org.scalatest.{BeforeAndAfterAll}
 
 import scala.concurrent.Await
 import scala.concurrent.duration._
 import scala.util.{Failure, Success}
 
 class TestingStreamsSpec extends TestKit(ActorSystem("TestingAkkaStreams"))
-  with WordSpecLike
+//  with AsyncWordSpecLike
+  with AnyWordSpecLike
   with BeforeAndAfterAll {
 
   implicit val materializer = ActorMaterializer()
@@ -51,7 +53,7 @@ class TestingStreamsSpec extends TestKit(ActorSystem("TestingAkkaStreams"))
       val streamUnderTest = simpleSource.via(flow)
 
       val probe = TestProbe()
-      val probeSink = Sink.actorRef(probe.ref, "completionMessage")
+      val probeSink = Sink.actorRef(probe.ref, "completionMessage", {error => s"fail: ${error.getMessage}"})
 
       streamUnderTest.to(probeSink).run()
       probe.expectMsgAllOf(0, 1, 3, 6, 10, 15)
@@ -86,6 +88,7 @@ class TestingStreamsSpec extends TestKit(ActorSystem("TestingAkkaStreams"))
         .sendNext(5)
         .sendNext(13)
         .sendComplete()
+
 
       resultFuture.onComplete {
         case Success(_) => fail("the sink under test should have thrown an exception on 13")

@@ -52,7 +52,7 @@ object AdvancedBackpressure extends App {
     })
     .map(resultingEvent => Notification(oncallEngineer, resultingEvent))
 
-  //  eventSource.via(aggregateNotificationFlow).async.to(Sink.foreach[Notification](sendEmailSlow)).run()
+    eventSource.via(aggregateNotificationFlow).async.to(Sink.foreach[Notification](sendEmailSlow)).run()
   // alternative to backpressure
 
   /*
@@ -65,7 +65,7 @@ object AdvancedBackpressure extends App {
   val extrapolator = Flow[Int].extrapolate(element => Iterator.from(element))
   val repeater = Flow[Int].extrapolate(element => Iterator.continually(element))
 
-  slowCounter.via(repeater).to(hungrySink).run()
-
-  val expander = Flow[Int].expand(element => Iterator.from(element))
+  //  slowCounter.via(repeater).to(hungrySink).run()
+  //
+  //  val expander = Flow[Int].expand(element => Iterator.from(element))
 }

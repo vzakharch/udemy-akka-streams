@@ -1,10 +1,14 @@
 package part3_graphs
 
-import java.util.Date
+import akka.Done
+import akka.Done.done
 
+import java.util.Date
 import akka.actor.ActorSystem
 import akka.stream.{ActorMaterializer, ClosedShape, FanOutShape2, UniformFanInShape}
-import akka.stream.scaladsl.{Broadcast, Flow, GraphDSL, RunnableGraph, Sink, Source, ZipWith}
+import akka.stream.scaladsl.{Balance, Broadcast, Flow, GraphDSL, RunnableGraph, Sink, Source, ZipWith}
+
+import java.util.concurrent.Future
 
 object MoreOpenGraphs extends App {
 
@@ -87,7 +91,6 @@ object MoreOpenGraphs extends App {
   // step 1
   val suspiciousTxnStaticGraph = GraphDSL.create() { implicit builder =>
     import GraphDSL.Implicits._
-
     // step 2 - define SHAPES
     val broadcast = builder.add(Broadcast[Transaction](2))
     val suspiciousTxnFilter = builder.add(Flow[Transaction].filter(txn => txn.amount > 10000))

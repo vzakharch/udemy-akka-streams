@@ -6,6 +6,7 @@ import akka.stream.scaladsl.{Balance, GraphDSL, Merge, RunnableGraph, Sink, Sour
 import akka.stream._
 
 import scala.collection.immutable
+import scala.concurrent.Future
 import scala.concurrent.duration._
 
 object CustomGraphShapes extends App {
@@ -104,35 +105,37 @@ object CustomGraphShapes extends App {
       }
   }
 
-  val balanceMxNGraph = RunnableGraph.fromGraph(
+  val slowSource = Source(Stream.from(1)).throttle(1, 1 second)
+  val fastSource = Source(Stream.from(1)).throttle(2, 1 second)
+
+  val sourceList = List(slowSource,fastSource)
+  def createSink(index: Int) = Sink.fold(0)((count: Int, element: Int) => {
+    println(s"[sink $index] Received $element, current count is $count")
+    count + 1
+  })
+  val sinkList = List(
+    createSink(1),
+    createSink(2),
+    createSink(3),
+  )
+
+  def balanceMxNGraph[T](sources: List[Source[T, NotUsed]], sinks: List[Sink[T, Future[T]]]) = RunnableGraph.fromGraph(
     GraphDSL.create() { implicit builder =>
       import GraphDSL.Implicits._
 
-      val slowSource = Source(Stream.from(1)).throttle(1, 1 second)
-      val fastSource = Source(Stream.from(1)).throttle(2, 1 second)
+      val sinkShapes = sinks.map(builder.add(_))
+      val balancer = builder.add(BalanceMxN[T](sources.size, sinks.size))
 
-      def createSink(index: Int) = Sink.fold(0)((count: Int, element: Int) => {
-        println(s"[sink $index] Received $element, current count is $count")
-        count + 1
-      })
-
-      val sink1 = builder.add(createSink(1))
-      val sink2 = builder.add(createSink(2))
-      val sink3 = builder.add(createSink(3))
-
-      val balance2x3 = builder.add(BalanceMxN[Int](2, 3))
-
-      slowSource ~> balance2x3.inlets(0)
-      fastSource ~> balance2x3.inlets(1)
-
-      balance2x3.outlets(0) ~> sink1
-      balance2x3.outlets(1) ~> sink2
-      balance2x3.outlets(2) ~> sink3
-
+      for (i <- sources.indices) {
+        sources(i) ~> balancer.inlets(i)
+      }
+      for (i <- sinkShapes.indices) {
+        balancer.outlets(i) ~> sinkShapes(i)
+      }
       ClosedShape
     }
   )
 
-  balanceMxNGraph.run()
+  balanceMxNGraph[Int](sourceList, sinkList).run()
 
 }

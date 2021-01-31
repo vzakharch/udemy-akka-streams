@@ -1,7 +1,7 @@
 package playground
 
 import akka.actor.ActorSystem
-import akka.stream.ActorMaterializer
+import akka.stream.{ActorMaterializer, Materializer}
 import akka.stream.scaladsl.{Flow, Keep, RunnableGraph, Sink, Source}
 
 import scala.concurrent.Future
@@ -9,7 +9,7 @@ import scala.concurrent.Future
 object Playground extends App {
 
   implicit val system = ActorSystem("AkkaStreamsDemo")
-  implicit val materializer: ActorMaterializer = ActorMaterializer()
+  //  implicit val materializer: Materializer = Materializer()
   import system.dispatcher
 
   val source = Source(1 to 10)
@@ -23,5 +23,6 @@ object Playground extends App {
   val sum: Future[Int] = runnable.run()
   sum.onComplete(x => println(s"Sum: $x"))
 
+  sum.onComplete(_ => system.terminate())
 
 }

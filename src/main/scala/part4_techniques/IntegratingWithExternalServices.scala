@@ -26,7 +26,15 @@ object IntegratingWithExternalServices extends App {
     PagerEvent("AkkaInfra", "Infrastructure broke", new Date),
     PagerEvent("FastDataPipeline", "Illegal elements in the data pipeline", new Date),
     PagerEvent("AkkaInfra", "A service stopped responding", new Date),
-    PagerEvent("SuperFrontend", "A button doesn't work", new Date)
+    PagerEvent("SuperFrontend", "A button doesn't work", new Date),
+    PagerEvent("AkkaInfra", "A service stopped responding", new Date),
+    PagerEvent("SuperFrontend", "A button doesn't work", new Date),
+    PagerEvent("AkkaInfra", "A service stopped responding", new Date),
+    PagerEvent("SuperFrontend", "A button doesn't work", new Date),
+    PagerEvent("AkkaInfra", "A service stopped responding", new Date),
+    PagerEvent("SuperFrontend", "A button doesn't work", new Date),
+    PagerEvent("AkkaInfra", "A service stopped responding", new Date),
+    PagerEvent("SuperFrontend", "A button doesn't work", new Date),
   ))
 
   object PagerService {
@@ -48,7 +56,7 @@ object IntegratingWithExternalServices extends App {
 
       // return the email that was paged
       engineerEmail
-    }
+    }(dispatcher)
   }
 
   val infraEvents = eventSource.filter(_.application == "AkkaInfra")
@@ -69,18 +77,17 @@ object IntegratingWithExternalServices extends App {
       val engineerIndex = (pagerEvent.date.toInstant.getEpochSecond / (24 * 3600)) % engineers.length
       val engineer = engineers(engineerIndex.toInt)
       val engineerEmail = emails(engineer)
-
-      // page the engineer
-      log.info(s"Sending engineer $engineerEmail a high priority notification: $pagerEvent")
-      Thread.sleep(1000)
-
-      // return the email that was paged
-      engineerEmail
+      val replyTo = sender()
+      Future { // page the engineer
+        log.info(s"Sending engineer $engineerEmail a high priority notification: $pagerEvent")
+        Thread.sleep(1000)
+        // return the email that was paged
+        replyTo ! engineerEmail
+      }
     }
-
     override def receive: Receive = {
       case pagerEvent: PagerEvent =>
-        sender() ! processEvent(pagerEvent)
+        processEvent(pagerEvent)
     }
   }
 
